@@ -1,16 +1,20 @@
-# CAT-Seg🐱: Cost Aggregation for Open-Vocabulary Semantic Segmentation
+# CAT-Seg:cat:: Cost Aggregation for Open-Vocabulary Semantic Segmentation
 
-This is our official implementation of CAT-Seg🐱!
+This is our official implementation of CAT-Seg!
 
-[[arXiv](#)] [[Project](https://ku-cvlab.github.io/CAT-Seg/)]<br>
+[[arXiv](#)] [[Project](https://ku-cvlab.github.io/CAT-Seg/)] [[HuggingFace Demo](https://huggingface.co/spaces/hamacojr/CAT-Seg)]<br>
 by [Seokju Cho](https://seokju-cho.github.io/)\*, [Heeseong Shin](https://github.com/hsshin98)\*, [Sunghwan Hong](https://sunghwanhong.github.io), Seungjun An, Seungjun Lee, [Anurag Arnab](https://anuragarnab.github.io), [Paul Hongsuck Seo](https://phseo.github.io), [Seungryong Kim](https://cvlab.korea.ac.kr)
-
 
 ## Introduction
 ![](assets/fig1.png)
 We introduce cost aggregation to open-vocabulary semantic segmentation, which jointly aggregates both image and text modalities within the matching cost.
 
 For further details and visualization results, please check out our [paper](#) and our [project page](https://ku-cvlab.github.io/CAT-Seg/).
+
+## :fire:TODO
+- [x] Train/Evaluation Code (Mar 21, 2023)
+- [ ] Pre-trained weights
+- [ ] Code of interactive demo
 
 ## Installation
 Please follow [installation](INSTALL.md). 
@@ -25,14 +29,16 @@ To train or evaluate the model in different environments, modify the given shell
 
 ### Training script
 ```bash
+sh run.sh [CONFIG] [NUM_GPUS] [OUTPUT_DIR] [OPTS]
+
 # For ViT-B variant
-sh run.sh configs/vitb_r101_384.yaml output/
+sh run.sh configs/vitb_r101_384.yaml 4 output/
 # For ViT-L variant
-sh run.sh configs/vitl_swinb_384.yaml output/
+sh run.sh configs/vitl_swinb_384.yaml 4 output/
 # For ViT-H variant
-sh run.sh configs/vitl_swinb_384.yaml output/ MODEL.SEM_SEG_HEAD.CLIP_PRETRAINED "ViT-H" MODEL.SEM_SEG_HEAD.TEXT_GUIDANCE_DIM 1024
+sh run.sh configs/vitl_swinb_384.yaml 4 output/ MODEL.SEM_SEG_HEAD.CLIP_PRETRAINED "ViT-H" MODEL.SEM_SEG_HEAD.TEXT_GUIDANCE_DIM 1024
 # For ViT-G variant
-sh run.sh configs/vitl_swinb_384.yaml output/ MODEL.SEM_SEG_HEAD.CLIP_PRETRAINED "ViT-G" MODEL.SEM_SEG_HEAD.TEXT_GUIDANCE_DIM 1280
+sh run.sh configs/vitl_swinb_384.yaml 4 output/ MODEL.SEM_SEG_HEAD.CLIP_PRETRAINED "ViT-G" MODEL.SEM_SEG_HEAD.TEXT_GUIDANCE_DIM 1280
 ```
 
 ## Evaluation
@@ -41,10 +47,12 @@ To individually run the model in different datasets, please refer to the command
 
 ### Evaluation script
 ```bash
-sh eval.sh configs/vitl_swinb_384.yaml output/ MODEL.WEIGHTS path/to/weights.pth
+sh run.sh [CONFIG] [NUM_GPUS] [OUTPUT_DIR] [OPTS]
+
+sh eval.sh configs/vitl_swinb_384.yaml 4 output/ MODEL.WEIGHTS path/to/weights.pth
 ```
 
-## Citing CAT-Seg🐱 :pray:
+## Citing CAT-Seg :cat::pray:
 
 ```BibTeX
 #
