@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html><head lang="en"><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+
+    <title>CAT-Seg</title>
+
+    <meta name="description" content="">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <meta property="og:image" content="img/cats.png">
+    <meta property="og:image:type" content="image/png">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://ku-cvlab.github.io/CAT-Seg/">
+    <meta property="og:title" content="CAT-Seg🐱: Cost Aggregation for Open-Vocabulary Semantic Segmentation">
+    <meta property="og:description" content="">
+
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="CAT-Seg🐱: Cost Aggregation for Open-Vocabulary Semantic Segmentation">
+    <meta name="twitter:description" content="Existing works on open-vocabulary semantic segmentation have utilized large-scale vision-language models, such as CLIP, to leverage their exceptional open-vocabulary recognition capabilities. However,  the problem of transferring these capabilities learned from image-level supervision to the pixel-level task of segmentation and addressing arbitrary unseen categories at inference makes this task challenging. To address these issues, we aim to attentively relate objects within an image to given categories by leveraging relational information among class categories and visual semantics through aggregation, while also adapting the CLIP representations to the pixel-level task. However, we observe that direct optimization of the CLIP embeddings can harm its open-vocabulary capabilities. In this regard, we propose an alternative approach to optimize the image-text similarity map, i.e. the cost map, using a novel cost aggregation-based method. Our framework, namely CAT-Seg, achieves state-of-the-art performance across all benchmarks. We provide extensive ablation studies to validate our choices.">
+    <meta name="twitter:image" content="img/cats.png">
+
+
+    <!-- mirror: F0%9F%AA%9E&lt -->
+    <link rel="icon" type="image/x-icon" href="/images/favicon.ico">
+    <link rel="icon" href="data:image/svg+xml,&lt;svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22&gt;&lt;text y=%22.9em%22 font-size=%2290%22&gt;%E2%9C%A8&lt;/text&gt;&lt;/svg&gt;">
+    <link rel="stylesheet" href="css/bootstrap.min.css">
+    <link rel="stylesheet" href="css/font-awesome.min.css">
+    <link rel="stylesheet" href="css/codemirror.min.css">
+    <link rel="stylesheet" href="css/app.css">
+
+    <script src="js/jquery.min.js"></script>
+    <script src="js/bootstrap.min.js"></script>
+    <script src="js/codemirror.min.js"></script>
+    <script src="js/clipboard.min.js"></script>
+    <script src="js/video_comparison.js"></script>
+    <script src="js/app.js"></script>
+</head>
+
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-QVFM103BVF"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-QVFM103BVF');
+</script>
+
+<body>
+    <div class="container" id="header" style="text-align: center; margin: auto;">
+        <div class="row" id="title-row" style="max-width: 100%; margin: 0 auto; display: inline-block">
+            <h2 class="col-md-12 text-center" id="title">
+                <b>CAT-Seg🐱</b>: Cost Aggregation for <br> Open-Vocabulary Semantic Segmentation<br>
+                <small>
+                    Arxiv 2023
+                </small>
+            </h2>
+        </div>
+        <div class="row" id="author-row" style="margin:0 auto;">
+            <div class="col-md-12 text-center" style="display: table; margin:0 auto">
+                <table class="author-table" id="author-table">
+                    <tr>
+                        <td>
+                            <a style="text-decoration:none" href="https://seokju-cho.github.io/">
+                              Seokju Cho*
+                            </a>
+                            <br>Korea University
+                        </td>
+                        <td>
+                            <a style="text-decoration:none" href="https://github.com/hsshin98">
+                              Heeseong Shin*
+                            </a>
+                            <br>Korea University
+                        </td>
+                        <td>
+                            <a style="text-decoration:none" href="https://sunghwanhong.github.io">
+                             Sunghwan Hong
+                            </a>
+                            <br>Korea University
+                        </td>
+                        <td>
+                            <a style="text-decoration:none" href="#">
+                             Seungjun An
+                            </a>
+                            <br>Korea University
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>
+                            <a style="text-decoration:none" href="#">
+                                Seungjun Lee
+                            </a>
+                            <br>Korea University
+                        </td>
+                        <td>
+                            <a style="text-decoration:none" href="https://anuragarnab.github.io">
+                              Anurag Arnab
+                            </a>
+                            <br>Google Research
+                        </td>
+                        <td>
+                            <a style="text-decoration:none" href="https://phseo.github.io">
+                              Paul Hongsuck Seo
+                            </a>
+                            <br>Google Research
+                        </td>
+                        <td>
+                            <a style="text-decoration:none" href="https://cvlab.korea.ac.kr">
+                              Seungryong Kim
+                            </a>
+                            <br>Korea University
+                        </td>
+                    </tr>
+                </table>
+
+                <small>
+                    *Equal Contribution
+                </small>
+            </div>
+        </div>
+    </div>
+    <script>
+        document.getElementById('author-row').style.maxWidth = document.getElementById("title-row").clientWidth + 'px';
+    </script>
+    <div class="container" id="main">
+        <div class="row">
+                <div class="col-sm-6 col-sm-offset-3 text-center">
+                    <ul class="nav nav-pills nav-justified">
+                        <li>
+                            <a href="#">
+                            <img src="./img/paper_image.png" height="60px">
+                                <h4><strong>Paper</strong></h4>
+                            </a>
+                        </li>
+                        <!-- <li>
+                            <a href="https://youtu.be/qrdRH9irAlk">
+                            <img src="./img/youtube_icon.png" height="60px">
+                                <h4><strong>Video</strong></h4>
+                            </a>
+                        </li> -->
+                        <!-- <li>
+                            <a href="https://storage.googleapis.com/gresearch/refraw360/ref.zip" target="_blank">
+                            <image src="img/database_icon.png" height="60px">
+                                <h4><strong>Shiny Dataset</strong></h4>
+                            </a>
+                        </li>                          -->
+                        <li>
+                            <a href="https://github.com/KU-CVLAB/CAT-Seg" target="_blank">
+                            <image src="img/github.png" height="60px">
+                                <h4><strong>Code</strong></h4>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="https://huggingface.co/spaces/hamacojr/CAT-Seg" target="_blank">
+                            <image src="img/huggingface_logo-noborder.svg" height="60px">
+                                <h4><strong>Demo</strong></h4>
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+        </div>
+
+
+        <div class="row">
+            <div class="col-md-8 col-md-offset-2">
+                <div class="text-center">
+                    <video id="ide" width="100%" playsinline autoplay controls loop muted>
+                        <source src="video/fig1_animation.mp4" type="video/mp4" />
+                    </video>
+                </div>
+            </div>
+        </div>
+
+
+        <div class="row">
+            <div class="col-md-8 col-md-offset-2">
+                <h3>
+                    Abstract
+                </h3>
+                <p class="text-justify">
+                    Existing works on open-vocabulary semantic segmentation have utilized large-scale vision-language models, such as CLIP, to leverage their exceptional open-vocabulary recognition capabilities. However,  the problem of transferring these capabilities learned from image-level supervision to the pixel-level task of segmentation and addressing arbitrary unseen categories at inference makes this task challenging. To address these issues, we aim to attentively relate objects within an image to given categories by leveraging relational information among class categories and visual semantics through aggregation, while also adapting the CLIP representations to the pixel-level task. However, we observe that direct optimization of the CLIP embeddings can harm its open-vocabulary capabilities. In this regard, we propose an alternative approach to optimize the image-text similarity map, i.e. the cost map, using a novel cost aggregation-based method. Our framework, namely CAT-Seg, achieves <b>state-of-the-art performance across all benchmarks</b>. We provide extensive ablation studies to validate our choices.
+                </p>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-8 col-md-offset-2">
+                <h3>
+                    HuggingFace Demo
+                </h3>
+                <iframe
+                    src="https://hamacojr-cat-seg.hf.space/?__theme=light"
+                    frameborder="0"
+                    width="100%"
+                    height="600pt"
+                    id="demo"
+                ></iframe>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-8 col-md-offset-2">
+                <h3>
+                    Qualitative Results
+                </h3>
+                <div class="text-justify">
+                    Qualitative results of ADE20K with 150 categories.
+                </div>
+                <div class="text-center">
+                    <img src="./img/ade150.png" width="100%">
+                </div>
+                <br>
+                <div class="text-justify">
+                    Qualitative results of ADE20K with 847 categories.
+                </div>
+                <div class="text-center">
+                    <img src="./img/ade847.png" width="96%">
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-8 col-md-offset-2">
+                <h3>
+                    Quantitative Results
+                </h3>
+                <div class="text-justify">
+                    The best-performing results are presented in <b>bold</b>, while the second-best results are <u>underlined</u>. Improvements over the second-best methods are highlighted in <b style="color:forestgreen;">green</b>. mIoU is adopted for evaluation metric. &dagger;: Re-implemented to train with full COCO-Stuff dataset. *: Model trained on LAION-2B dataset
+                </div>
+                <div class="text-center">
+                    <img src="./img/main_table.png" width="100%">
+                </div>
+            </div>
+        </div>
+
+        <!-- <image src="img/architecture.png" class="img-responsive" alt="overview" width="60%" style="max-height: 450px;margin:auto;"> -->
+
+        <!-- <div class="row">
+            <div class="col-md-8 col-md-offset-2">
+                <h3>
+                    Video
+                </h3>
+                <div class="text-center">
+                    <div style="position:relative;padding-top:56.25%;">
+                        <iframe src="https://youtube.com/embed/qrdRH9irAlk" allowfullscreen style="position:absolute;top:0;left:0;width:100%;height:100%;"></iframe>
+                    </div>
+                </div>
+            </div>
+        </div> -->
+
+        <div class="row">
+            <div class="col-md-8 col-md-offset-2">
+                <h3>
+                    Motivation of Cost Aggregation
+                </h3>
+                <div class="text-justify">
+                    To validate our framework, we consider two approaches: direct optimization of CLIP embeddings through feature aggregation and indirect optimization through <i>cost aggregation</i>. 
+                    <b>Left</b>: Both approaches achieves performance gains for <i>seen</i> classes from fine-tuning the CLIP image encoder.
+                    <b>Right</b>: Feature aggregation fails to generalize to <i>unseen</i> classes, while cost aggregation achieves a large performance gains, highlighting the effectiveness of this approach for open-vocabulary segmentation.
+                    <br><br>
+                    
+                </div>
+                
+                <div class="text-center">
+                    <img src="./img/plot.png" width="80%">
+                </div>
+                <!-- <div class="text-center">
+                    <video id="refdir" width="40%" playsinline autoplay loop muted>
+                        <source src="video/reflection_animation.mp4" type="video/mp4" />
+                    </video>
+                </div> -->
+            </div>
+        </div>
+
+        <!-- <div class="row">
+            <div class="col-md-8 col-md-offset-2">
+                <h3>
+                    Main Architecture
+                </h3>
+                <div class="text-justify">
+                    Our network consists of a cost computation, aggregation module consisting of
+                    spatial aggregation and inter-class aggregation and an upsampling decoder.
+                </div>
+                <br>
+
+                <div class="text-center">
+                    <img src="./img/main_architecture.png" width="100%">
+                </div>
+            </div>
+        </div> -->
+
+<!-- 
+        <div class="row">
+            <div class="col-md-8 col-md-offset-2">
+                <h3>
+                    Additional Synthetic Results
+                </h3>
+                <div class="video-compare-container">
+                    <video class="video" id="musclecar" loop playsinline autoPlay muted src="video/musclecar_mipnerf_ours.mp4" onplay="resizeAndPlay(this)"></video>
+                    <canvas height=0 class="videoMerge" id="musclecarMerge"></canvas>
+                </div>
+			</div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-8 col-md-offset-2">
+                <h3>
+                    Results on Captured Scenes
+                </h3>
+                Our method also produces accurate renderings and surface normals from captured photographs:
+                <div class="video-compare-container" style="width: 100%">
+                    <video class="video" id="toycar" loop playsinline autoPlay muted src="video/toycar.mp4" onplay="resizeAndPlay(this)"></video>
+                    <canvas height=0 class="videoMerge" id="toycarMerge"></canvas>
+                </div>
+			</div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-8 col-md-offset-2">
+                <h3>
+                    Scene Editing
+                </h3>
+                <div class="text-justify">
+                    We show that our structured representation of the directional MLP allows for scene editing after training. Here we show that we can convincingly change material properties.
+                    <br>
+                    We can increase and decrease material roughness:
+                </div>
+
+                <div style="overflow: hidden;">
+                    <video id="editing-materials" width="100%" playsinline autoplay loop muted style="margin-top: -5%;">
+                        <source src="video/materials_rougher_smoother.mp4" type="video/mp4" />
+                    </video>
+                </div>
+
+                <div class="text-justify">
+                    We can also control the amounts of specular and diffuse colors, or change the diffuse color without affecting the specular reflections:
+                </div>
+                
+                <table width="100%">
+                    <tr>
+                        <td align="left" valign="top" width="50%">
+                            <video id="v2" width="100%" playsinline autoplay loop muted>
+                                <source src="video/car_color2.mp4" type="video/mp4" />
+                            </video>
+                        </td>
+                        <td align="left" valign="top" width="50%">
+                            <video id="v3" width="100%" playsinline autoplay loop muted>
+                                <source src="video/car_color3.mp4" type="video/mp4" />
+                            </video>
+                        </td>
+                    </tr>
+                </table>
+
+            </div>
+        </div> -->
+
+        <div class="row">
+            <div class="col-md-8 col-md-offset-2">
+                <h3>
+                    In-the-Wild Segmentation Results
+                </h3>
+                <div class="text-center">
+                    <img src="./img/in-the-wild/nyan/nyancat.png" width="33%">
+                    <img src="./img/in-the-wild/nyan/nyancat_seg.png" width="33%">
+                    <img src="./img/in-the-wild/nyan/nyancat_seg2.png" width="33%">
+                </div>
+                <!-- <br>
+                <div class="text-center">
+                    <img src="./img/in-the-wild/personcat/nichijou.jpg" width="49.5%">
+                    <img src="./img/in-the-wild/personcat/nichijou_seg.png" width="49.5%">
+                </div> -->
+                <br>
+                <div class="text-center">
+                    <img src="./img/in-the-wild/longcat/longcat.jpg" width="49.5%">
+                    <img src="./img/in-the-wild/longcat/longcat_seg.png" width="49.5%">
+                </div>
+                <br>
+                <div class="text-center">
+                    <img src="./img/in-the-wild/simscat/simscat.jpg" width="49.5%">
+                    <img src="./img/in-the-wild/simscat/simscat_seg.png" width="49.5%">
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-8 col-md-offset-2">
+                <h3>
+                    Citation
+                </h3>
+                <div class="form-group col-md-10 col-md-offset-1">
+                    <textarea id="bibtex" class="form-control" readonly>
+                        TBD.
+                    </textarea>
+                </div>
+            </div>
+        </div>
+<!--             
+        <div class="row">
+            <div class="col-md-8 col-md-offset-2">
+                <h3>
+                    Citation
+                </h3>
+                <div class="form-group col-md-10 col-md-offset-1">
+                    <textarea id="bibtex" class="form-control" readonly>
+@article{verbin2022refnerf,
+    title={{Ref-NeRF}: Structured View-Dependent Appearance for
+           Neural Radiance Fields},
+    author={Dor Verbin and Peter Hedman and Ben Mildenhall and
+            Todd Zickler and Jonathan T. Barron and Pratul P. Srinivasan},
+    journal={CVPR},
+    year={2022}
+}</textarea>
+                </div>
+            </div>
+        </div> -->
+
+        <div class="row">
+            <div class="col-md-8 col-md-offset-2">
+                <h3>
+                    Acknowledgements
+                </h3>
+                <p class="text-justify">
+                <!-- We would like to thank Lior Yariv and Kai Zhang for helping us evaluate their methods, and Ricardo Martin-Brualla for helpful comments on our text. DV is supported by the National Science Foundation under Cooperative Agreement PHY-2019786 (an NSF AI Institute, <a href="http://iaifi.org">http://iaifi.org</a>) -->
+                    <!-- <br> -->
+                The website template was borrowed from <a href="http://mgharbi.com/">Michaël Gharbi</a>.
+                </p>
+            </div>
+        </div>
+    </div>
+
+
+</body></html>
