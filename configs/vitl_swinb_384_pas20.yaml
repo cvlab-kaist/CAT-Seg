@@ -1,0 +1,7 @@
+_BASE_: vitl_swinb_384.yaml
+MODEL:
+  META_ARCHITECTURE: "CATSeg"
+  SEM_SEG_HEAD:
+    TEST_CLASS_JSON: "datasets/voc20.json"
+DATASETS:
+  TEST: ("voc_2012_test_sem_seg",)
