@@ -1,22 +1,28 @@
 #!/bin/sh
 
-gpus=4
 config=$1
-output=$2
+gpus=$2
+output=$3
 
 if [ -z $config ]
 then
-    echo "No config file found! Run with "sh run.sh [CONFIG_FILE] [OUTPUT_DIR] [OPTS]""
+    echo "No config file found! Run with "sh eval.sh [CONFIG_FILE] [NUM_GPUS] [OUTPUT_DIR] [OPTS]""
+    exit 0
+fi
+
+if [ -z $gpus ]
+then
+    echo "Number of gpus not specified! Run with "sh eval.sh [CONFIG_FILE] [NUM_GPUS] [OUTPUT_DIR] [OPTS]""
     exit 0
 fi
 
 if [ -z $output ]
 then
-    echo "No output directory found! Run with "sh run.sh [CONFIG_FILE] [OUTPUT_DIR] [OPTS]""
+    echo "No output directory found! Run with "sh eval.sh [CONFIG_FILE] [NUM_GPUS] [OUTPUT_DIR] [OPTS]""
     exit 0
 fi
 
-shift 2
+shift 3
 opts=${@}
 
 python train_net.py --config $config \
@@ -26,4 +32,4 @@ python train_net.py --config $config \
  OUTPUT_DIR $output \
  $opts
 
-sh eval.sh $config $output $opts
+sh eval.sh $config $gpus $output $opts

@@ -12,7 +12,7 @@
 An example of installation is shown below:
 
 ```
-git clone https://github.com/hsshin98/CAT-Seg.git
+git clone https://github.com/KU-CVLAB/CAT-Seg.git
 cd CAT-Seg
 conda create -n catseg python=3.8
 conda activate catseg
