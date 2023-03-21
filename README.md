@@ -52,6 +52,9 @@ sh run.sh [CONFIG] [NUM_GPUS] [OUTPUT_DIR] [OPTS]
 sh eval.sh configs/vitl_swinb_384.yaml 4 output/ MODEL.WEIGHTS path/to/weights.pth
 ```
 
+## Acknowledgement
+We would like to acknowledge the contributions of public projects, such as [Zegformer](https://github.com/dingjiansw101/ZegFormer), whose code has been utilized in this repository.
+
 ## Citing CAT-Seg :cat::pray:
 
 ```BibTeX
