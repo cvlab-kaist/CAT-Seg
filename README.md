@@ -58,5 +58,12 @@ We would like to acknowledge the contributions of public projects, such as [Zegf
 ## Citing CAT-Seg :cat::pray:
 
 ```BibTeX
-#
+@misc{cho2023catseg,
+      title={CAT-Seg: Cost Aggregation for Open-Vocabulary Semantic Segmentation}, 
+      author={Seokju Cho and Heeseong Shin and Sunghwan Hong and Seungjun An and Seungjun Lee and Anurag Arnab and Paul Hongsuck Seo and Seungryong Kim},
+      year={2023},
+      eprint={2303.11797},
+      archivePrefix={arXiv},
+      primaryClass={cs.CV}
+}
 ```
