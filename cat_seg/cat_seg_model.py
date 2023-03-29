@@ -188,17 +188,18 @@ class CATSeg(nn.Module):
         images = (image - self.pixel_mean) / self.pixel_std
         clip_images = (image - self.clip_pixel_mean) / self.clip_pixel_std
         clip_images = F.interpolate(clip_images, size=self.clip_resolution, mode='bilinear', align_corners=False, )
-        clip_features = self.sem_seg_head.predictor.clip_model.encode_image(clip_images, dense=True)
         
         if self.sequential:
             outputs = []
-            for clip_feat, image in zip(clip_features, images):
+            for clip_feat, image in zip(clip_images, images):
                 feature = self.backbone(image.unsqueeze(0))
-                output = self.sem_seg_head(clip_feat.unsqueeze(0), feature)
+                clip_feat = self.sem_seg_head.predictor.clip_model.encode_image(clip_feat.unsqueeze(0), dense=True)
+                output = self.sem_seg_head(clip_feat, feature)
                 outputs.append(output[0])
             outputs = torch.stack(outputs, dim=0)
         else:
             features = self.backbone(images)
+            clip_features = self.sem_seg_head.predictor.clip_model.encode_image(clip_images, dense=True)
             outputs = self.sem_seg_head(clip_features, features)
 
         outputs = F.interpolate(outputs, size=kernel, mode="bilinear", align_corners=False)
@@ -212,5 +213,5 @@ class CATSeg(nn.Module):
 
         height = batched_inputs[0].get("height", out_res[0])
         width = batched_inputs[0].get("width", out_res[1])
-        output = sem_seg_postprocess(outputs, out_res, height, width)
+        output = sem_seg_postprocess(outputs[0], out_res, height, width)
         return [{'sem_seg': output}]

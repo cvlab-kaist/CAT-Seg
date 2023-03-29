@@ -23,7 +23,7 @@ Please follow [installation](INSTALL.md).
 Please follow [dataset preperation](datasets/README.md).
 
 ## Training
-We provide shell scripts for training and evaluation. ```run.py``` trains the model in default configuration and evaluates the model after training. 
+We provide shell scripts for training and evaluation. ```run.sh``` trains the model in default configuration and evaluates the model after training. 
 
 To train or evaluate the model in different environments, modify the given shell script and config files accordingly.
 
@@ -52,9 +52,80 @@ sh run.sh [CONFIG] [NUM_GPUS] [OUTPUT_DIR] [OPTS]
 sh eval.sh configs/vitl_swinb_384.yaml 4 output/ MODEL.WEIGHTS path/to/weights.pth
 ```
 
+## Pretrained Models
+We provide pretrained weights for our models reported in the paper. All of the models were evaluated with 4 NVIDIA RTX 3090 GPUs, and can be reproduced with the evaluation script above.
+
+<table><tbody>
+<!-- START TABLE -->
+<!-- TABLE HEADER -->
+<th valign="bottom">Name</th>
+<th valign="bottom">Backbone</th>
+<th valign="bottom">CLIP</th>
+<th valign="bottom">A-847</th>
+<th valign="bottom">PC-459</th>
+<th valign="bottom">A-150</th>
+<th valign="bottom">PC-59</th>
+<th valign="bottom">PAS-20</th>
+<th valign="bottom">PAS-20b</th>
+<th valign="bottom">Download</th>
+<!-- TABLE BODY -->
+<!-- ROW: CAT-Seg (B) -->
+<tr>
+<td align="left">CAT-Seg (B)</a></td>
+<td align="center">R101</td>
+<td align="center">ViT-B/16</td>
+<td align="center">8.9</td>
+<td align="center">16.6</td>
+<td align="center">27.2</td>
+<td align="center">57.5</td>
+<td align="center">93.7</td>
+<td align="center">78.3</td>
+<td align="center"><a href="">ckpt</a>&nbsp;
+</tr>
+<!-- ROW: CAT-Seg (L) -->
+<tr>
+<td align="left">CAT-Seg (L)</a></td>
+<td align="center">Swin-B</td>
+<td align="center">ViT-L/14</td>
+<td align="center">11.4</td>
+<td align="center">20.4</td>
+<td align="center">31.5</td>
+<td align="center">62.0</td>
+<td align="center">96.6</td>
+<td align="center">81.8</td>
+<td align="center"><a href="">ckpt</a>&nbsp;
+</tr>
+<!-- ROW: CAT-Seg (H) -->
+<tr>
+<td align="left">CAT-Seg (H)</a></td>
+<td align="center">Swin-B</td>
+<td align="center">ViT-H/14</td>
+<td align="center">13.1</td>
+<td align="center">20.1</td>
+<td align="center">34.4</td>
+<td align="center">61.2</td>
+<td align="center">96.7</td>
+<td align="center">80.2</td>
+<td align="center"><a href="">ckpt</a>&nbsp;
+</tr>
+<!-- ROW: CAT-Seg (G) -->
+ <tr><td align="left">CAT-Seg (G)</a></td>
+<td align="center">Swin-B</td>
+<td align="center">ViT-G/14</td>
+<td align="center">14.1</td>
+<td align="center">21.4</td>
+<td align="center">36.2</td>
+<td align="center">61.5</td>
+<td align="center">97.1</td>
+<td align="center">81.4</td>
+<td align="center"><a href="">ckpt</a>&nbsp;
+</tr>
+</tbody></table>
+
+
 ## Acknowledgement
 We would like to acknowledge the contributions of public projects, such as [Zegformer](https://github.com/dingjiansw101/ZegFormer), whose code has been utilized in this repository.
-
+We also thank [Benedikt](benedikt.blumenstiel@student.kit.edu) for finding an error in our inference code and evaluating CAT-Seg over various datasets!
 ## Citing CAT-Seg :cat::pray:
 
 ```BibTeX
