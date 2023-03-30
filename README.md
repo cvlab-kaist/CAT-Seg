@@ -125,7 +125,7 @@ We provide pretrained weights for our models reported in the paper. All of the m
 
 ## Acknowledgement
 We would like to acknowledge the contributions of public projects, such as [Zegformer](https://github.com/dingjiansw101/ZegFormer), whose code has been utilized in this repository.
-We also thank [Benedikt](benedikt.blumenstiel@student.kit.edu) for finding an error in our inference code and evaluating CAT-Seg over various datasets!
+We also thank [Benedikt](mailto:benedikt.blumenstiel@student.kit.edu) for finding an error in our inference code and evaluating CAT-Seg over various datasets!
 ## Citing CAT-Seg :cat::pray:
 
 ```BibTeX
