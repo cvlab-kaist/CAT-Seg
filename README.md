@@ -15,7 +15,7 @@ by [Seokju Cho](https://seokju-cho.github.io/)\*, [Heeseong Shin](https://github
 ![](assets/fig1.png)
 We introduce cost aggregation to open-vocabulary semantic segmentation, which jointly aggregates both image and text modalities within the matching cost.
 
-For further details and visualization results, please check out our [paper](#) and our [project page](https://ku-cvlab.github.io/CAT-Seg/).
+For further details and visualization results, please check out our [paper](https://arxiv.org/abs/2303.11797) and our [project page](https://ku-cvlab.github.io/CAT-Seg/).
 
 ## :fire:TODO
 - [x] Train/Evaluation Code (Mar 21, 2023)
