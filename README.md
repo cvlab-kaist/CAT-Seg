@@ -80,7 +80,7 @@ We provide pretrained weights for our models reported in the paper. All of the m
 <td align="center">57.5</td>
 <td align="center">93.7</td>
 <td align="center">78.3</td>
-<td align="center"><a href="https://huggingface.co/hamacojr/CAT-Seg/raw/main/model_final_base.pth">ckpt</a>&nbsp;
+<td align="center"><a href="https://huggingface.co/hamacojr/CAT-Seg/blob/main/model_final_base.pth">ckpt</a>&nbsp;
 </tr>
 <!-- ROW: CAT-Seg (L) -->
 <tr>
@@ -93,7 +93,7 @@ We provide pretrained weights for our models reported in the paper. All of the m
 <td align="center">62.0</td>
 <td align="center">96.6</td>
 <td align="center">81.8</td>
-<td align="center"><a href="https://huggingface.co/hamacojr/CAT-Seg/raw/main/model_final_large.pth">ckpt</a>&nbsp;
+<td align="center"><a href="https://huggingface.co/hamacojr/CAT-Seg/blob/main/model_final_large.pth">ckpt</a>&nbsp;
 </tr>
 <!-- ROW: CAT-Seg (H) -->
 <tr>
@@ -106,7 +106,7 @@ We provide pretrained weights for our models reported in the paper. All of the m
 <td align="center">61.2</td>
 <td align="center">96.7</td>
 <td align="center">80.2</td>
-<td align="center"><a href="https://huggingface.co/hamacojr/CAT-Seg/raw/main/model_final_huge.pth">ckpt</a>&nbsp;
+<td align="center"><a href="https://huggingface.co/hamacojr/CAT-Seg/blob/main/model_final_huge.pth">ckpt</a>&nbsp;
 </tr>
 <!-- ROW: CAT-Seg (G) -->
  <tr><td align="left">CAT-Seg (G)</a></td>
@@ -118,7 +118,7 @@ We provide pretrained weights for our models reported in the paper. All of the m
 <td align="center">61.5</td>
 <td align="center">97.1</td>
 <td align="center">81.4</td>
-<td align="center"><a href="https://huggingface.co/hamacojr/CAT-Seg/raw/main/model_final_giant.pth">ckpt</a>&nbsp;
+<td align="center"><a href="https://huggingface.co/hamacojr/CAT-Seg/blob/main/model_final_giant.pth">ckpt</a>&nbsp;
 </tr>
 </tbody></table>
 
