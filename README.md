@@ -8,7 +8,7 @@
 
 This is our official implementation of CAT-Seg!
 
-[[arXiv](https://arxiv.org/abs/2303.11797)] [[Project](https://ku-cvlab.github.io/CAT-Seg/)] [[HuggingFace Demo](https://huggingface.co/spaces/hamacojr/CAT-Seg)]<br>
+[[arXiv](https://arxiv.org/abs/2303.11797)] [[Project](https://ku-cvlab.github.io/CAT-Seg/)] [[HuggingFace Demo](https://huggingface.co/spaces/hamacojr/CAT-Seg)] [[Segment Anything with CAT-Seg](https://huggingface.co/spaces/hamacojr/SAM-CAT-Seg)]<br>
 by [Seokju Cho](https://seokju-cho.github.io/)\*, [Heeseong Shin](https://github.com/hsshin98)\*, [Sunghwan Hong](https://sunghwanhong.github.io), Seungjun An, Seungjun Lee, [Anurag Arnab](https://anuragarnab.github.io), [Paul Hongsuck Seo](https://phseo.github.io), [Seungryong Kim](https://cvlab.korea.ac.kr)
 
 ## Introduction
@@ -16,6 +16,8 @@ by [Seokju Cho](https://seokju-cho.github.io/)\*, [Heeseong Shin](https://github
 We introduce cost aggregation to open-vocabulary semantic segmentation, which jointly aggregates both image and text modalities within the matching cost.
 
 For further details and visualization results, please check out our [paper](https://arxiv.org/abs/2303.11797) and our [project page](https://ku-cvlab.github.io/CAT-Seg/).
+
+**❗️Update:** We released a **[demo](https://huggingface.co/spaces/hamacojr/SAM-CAT-Seg)** for combining CAT-Seg and [Segment Anything](https://github.com/facebookresearch/segment-anything) for open-vocabulary semantic segmentation!
 
 ## :fire:TODO
 - [x] Train/Evaluation Code (Mar 21, 2023)
