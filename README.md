@@ -18,12 +18,12 @@ We introduce cost aggregation to open-vocabulary semantic segmentation, which jo
 
 For further details and visualization results, please check out our [paper](https://arxiv.org/abs/2303.11797) and our [project page](https://ku-cvlab.github.io/CAT-Seg/).
 
-**❗️Update:** We released a **[demo](https://huggingface.co/spaces/hamacojr/SAM-CAT-Seg)** for combining CAT-Seg and [Segment Anything](https://github.com/facebookresearch/segment-anything) for open-vocabulary semantic segmentation!
+**❗️Update:** We released a **[demo](https://huggingface.co/spaces/hamacojr/SAM-CAT-Seg)** for combining CAT-Seg and [Segment Anything](https://github.com/facebookresearch/segment-anything) for open-vocabulary semantic segmentation! We also released the code and installation guide in the demo branch for trying out the demo on your local devices! 
 
 ## :fire:TODO
 - [x] Train/Evaluation Code (Mar 21, 2023)
 - [x] Pre-trained weights (Mar 30, 2023)
-- [ ] Code of interactive demo
+- [x] Code of interactive demo (Jul 13, 2023)
 
 ## Installation
 Please follow [installation](INSTALL.md). 
