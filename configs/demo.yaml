@@ -1,0 +1,11 @@
+_BASE_: vitl_swinb_384.yaml
+MODEL:
+  META_ARCHITECTURE: "CATSegDemo"
+  WEIGHTS: "model_final_large.pth"
+  SEM_SEG_HEAD:
+    TRAIN_CLASS_JSON: "datasets/demo.json"
+    TEST_CLASS_JSON: "datasets/demo.json"
+    POOLING_SIZES: [1, 1]
+  PROMPT_ENSEMBLE_TYPE: "single"
+TEST:
+  SLIDING_WINDOW: True

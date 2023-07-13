@@ -49,16 +49,9 @@ class CATSegPredictor(nn.Module):
         super().__init__()
         
         import json
-        # use class_texts in train_forward, and test_class_texts in test_forward
-        with open(train_class_json, 'r') as f_in:
-            self.class_texts = json.load(f_in)
-        with open(test_class_json, 'r') as f_in:
-            self.test_class_texts = json.load(f_in)
-        assert self.class_texts != None
-        if self.test_class_texts == None:
-            self.test_class_texts = self.class_texts
+
         device = "cuda" if torch.cuda.is_available() else "cpu"
-  
+        self.device = device
         self.tokenizer = None
         if clip_pretrained == "ViT-G" or clip_pretrained == "ViT-H":
             # for OpenCLIP models
@@ -85,8 +78,8 @@ class CATSegPredictor(nn.Module):
         else:
             raise NotImplementedError
 
-        self.text_features = self.class_embeddings(self.class_texts, prompt_templates, clip_model).permute(1, 0, 2).float()
-        self.text_features_test = self.class_embeddings(self.test_class_texts, prompt_templates, clip_model).permute(1, 0, 2).float()
+        #self.text_features = self.class_embeddings(self.class_texts, prompt_templates, clip_model).permute(1, 0, 2).float()
+        #self.text_features_test = self.class_embeddings(self.test_class_texts, prompt_templates, clip_model).permute(1, 0, 2).float()
         
         self.clip_model = clip_model.float()
         self.clip_preprocess = clip_preprocess
@@ -161,9 +154,9 @@ class CATSegPredictor(nn.Module):
             else:
                 texts = [template.format(classname) for template in templates]  # format with class
             if self.tokenizer is not None:
-                texts = self.tokenizer(texts).cuda()
+                texts = self.tokenizer(texts).to(self.device)
             else: 
-                texts = clip.tokenize(texts).cuda()
+                texts = clip.tokenize(texts).to(self.device)
             class_embeddings = clip_model.encode_text(texts)
             class_embeddings /= class_embeddings.norm(dim=-1, keepdim=True)
             if len(templates) != class_embeddings.shape[0]:
@@ -171,5 +164,5 @@ class CATSegPredictor(nn.Module):
                 class_embeddings /= class_embeddings.norm(dim=-1, keepdim=True)
             class_embedding = class_embeddings
             zeroshot_weights.append(class_embedding)
-        zeroshot_weights = torch.stack(zeroshot_weights, dim=1).cuda()
+        zeroshot_weights = torch.stack(zeroshot_weights, dim=1).to(self.device)
         return zeroshot_weights

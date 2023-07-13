@@ -18,15 +18,33 @@ We introduce cost aggregation to open-vocabulary semantic segmentation, which jo
 
 For further details and visualization results, please check out our [paper](https://arxiv.org/abs/2303.11797) and our [project page](https://ku-cvlab.github.io/CAT-Seg/).
 
-**❗️Update:** We released a **[demo](https://huggingface.co/spaces/hamacojr/SAM-CAT-Seg)** for combining CAT-Seg and [Segment Anything](https://github.com/facebookresearch/segment-anything) for open-vocabulary semantic segmentation!
+## Demo Installation
+We release the code for our interactive demo, where you can run the demo on your local or desired devices!
 
-## :fire:TODO
-- [x] Train/Evaluation Code (Mar 21, 2023)
-- [x] Pre-trained weights (Mar 30, 2023)
-- [ ] Code of interactive demo
+Please follow the original [installation process](INSTALL.md) below before getting started with the demo.
+
+We use gradio, which can be installed as follows:
+
+```bash
+pip install gradio
+```
+
+For the demo, CAT-Seg (L) and SAM (ViT-H) is used as default. Please download each weights into the project directory.
+
+The demo can be launched with the ```app.py``` file.
+
+```bash
+python app.py [-- opts [OPTS]]
+
+# For CPU usage
+python app.py --opts MODEL.DEVICE "cpu" [OPTS]
+```
+
+
 
 ## Installation
 Please follow [installation](INSTALL.md). 
+
 
 ## Data Preparation
 Please follow [dataset preperation](datasets/README.md).

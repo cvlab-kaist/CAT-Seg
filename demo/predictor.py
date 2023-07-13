@@ -13,9 +13,11 @@ from detectron2.engine.defaults import DefaultPredictor
 from detectron2.utils.video_visualizer import VideoVisualizer
 from detectron2.utils.visualizer import ColorMode, Visualizer
 
+from cat_seg.third_party import imagenet_templates
+from types import SimpleNamespace as ns
 
 class VisualizationDemo(object):
-    def __init__(self, cfg, instance_mode=ColorMode.IMAGE, parallel=False):
+    def __init__(self, cfg, instance_mode=ColorMode.IMAGE, parallel=False, text=None):
         """
         Args:
             cfg (CfgNode):
@@ -36,7 +38,23 @@ class VisualizationDemo(object):
         else:
             self.predictor = DefaultPredictor(cfg)
 
-    def run_on_image(self, image):
+        # set classes
+        templates = ['A photo of a {} in the scene',]
+        #templates = imagenet_templates.IMAGENET_TEMPLATES
+        if text is not None:
+            pred = self.predictor.model.sem_seg_head.predictor
+            pred.test_class_texts = [t.strip() for t in text.split(',')]
+            pred.text_features_test = pred.class_embeddings(pred.test_class_texts, 
+                templates,
+                pred.clip_model).permute(1, 0, 2).float()
+            if len(templates) == 1:
+                pred.text_features_test = pred.text_features_test.repeat(1, 80, 1)
+            self.metadata = ns()
+            self.metadata.stuff_classes = pred.test_class_texts
+        
+        self.filter_background = False
+
+    def run_on_image(self, image, text=None, use_sam=False):
         """
         Args:
             image (np.ndarray): an image of shape (H, W, C) (in BGR order).
@@ -46,20 +64,36 @@ class VisualizationDemo(object):
             vis_output (VisImage): the visualized image output.
         """
         vis_output = None
+
+        if text is not None:
+            pred = self.predictor.model.sem_seg_head.predictor
+            pred.test_class_texts = text.split(',')
+            pred.text_features_test = pred.class_embeddings(pred.test_class_texts, 
+                #imagenet_templates.IMAGENET_TEMPLATES, 
+                 ['A photo of a {} in the scene',],
+                pred.clip_model).permute(1, 0, 2).float().repeat(1, 80, 1)
+            self.metadata = ns()
+            self.metadata.stuff_classes = pred.test_class_texts
+            self.metadata.thing_classes = pred.test_class_texts
+
+        self.predictor.model.use_sam = use_sam
+
         predictions = self.predictor(image)
         # Convert image from OpenCV BGR format to Matplotlib RGB format.
         image = image[:, :, ::-1]
         visualizer = Visualizer(image, self.metadata, instance_mode=self.instance_mode)
+        #import pdb; pdb.set_trace()
         if "panoptic_seg" in predictions:
             panoptic_seg, segments_info = predictions["panoptic_seg"]
             vis_output = visualizer.draw_panoptic_seg_predictions(
-                panoptic_seg.to(self.cpu_device), segments_info
+                panoptic_seg.to(self.cpu_device), segments_info,
+                alpha=0.5,
             )
         else:
             if "sem_seg" in predictions:
                 vis_output = visualizer.draw_sem_seg(
-                    predictions["sem_seg"].argmax(dim=0).to(self.cpu_device),
-                    alpha=0.4,
+                    self.filter_bg(predictions["sem_seg"].argmax(dim=0).to(self.cpu_device)),
+                    alpha=0.5,
                 )
             if "instances" in predictions:
                 instances = predictions["instances"].to(self.cpu_device)
@@ -87,6 +121,7 @@ class VisualizationDemo(object):
         video_visualizer = VideoVisualizer(self.metadata, self.instance_mode)
 
         def process_predictions(frame, predictions):
+            import pdb; pdb.set_trace()
             frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
             if "panoptic_seg" in predictions:
                 panoptic_seg, segments_info = predictions["panoptic_seg"]
@@ -98,7 +133,8 @@ class VisualizationDemo(object):
                 vis_frame = video_visualizer.draw_instance_predictions(frame, predictions)
             elif "sem_seg" in predictions:
                 vis_frame = video_visualizer.draw_sem_seg(
-                    frame, predictions["sem_seg"].argmax(dim=0).to(self.cpu_device)
+                    frame, 
+                    predictions["sem_seg"].argmax(dim=0).to(self.cpu_device),
                 )
 
             # Converts Matplotlib RGB format to OpenCV BGR format
@@ -127,6 +163,11 @@ class VisualizationDemo(object):
         else:
             for frame in frame_gen:
                 yield process_predictions(frame, self.predictor(frame))
+
+    def filter_bg(self, pred):
+        if self.filter_background:
+            pred[pred == 0] = 255
+        return pred
 
 
 class AsyncPredictor:
