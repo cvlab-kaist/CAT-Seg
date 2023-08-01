@@ -31,6 +31,9 @@ Please follow [installation](INSTALL.md).
 ## Data Preparation
 Please follow [dataset preperation](datasets/README.md).
 
+## Demo
+If you want to try your own images locally, please try [interactive demo](https://github.com/KU-CVLAB/CAT-Seg/tree/demo).
+
 ## Training
 We provide shell scripts for training and evaluation. ```run.sh``` trains the model in default configuration and evaluates the model after training. 
 
