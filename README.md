@@ -4,13 +4,12 @@
 [![PWC](https://img.shields.io/endpoint.svg?url=https://paperswithcode.com/badge/cat-seg-cost-aggregation-for-open-vocabulary/open-vocabulary-semantic-segmentation-on-1)](https://paperswithcode.com/sota/open-vocabulary-semantic-segmentation-on-1?p=cat-seg-cost-aggregation-for-open-vocabulary)<br>
 [![PWC](https://img.shields.io/endpoint.svg?url=https://paperswithcode.com/badge/cat-seg-cost-aggregation-for-open-vocabulary/open-vocabulary-semantic-segmentation-on-5)](https://paperswithcode.com/sota/open-vocabulary-semantic-segmentation-on-5?p=cat-seg-cost-aggregation-for-open-vocabulary)
 
-# CAT-Seg:cat:: Cost Aggregation for Open-Vocabulary Semantic Segmentation
-
-This is our official implementation of CAT-Seg!
+# CAT-Seg: Cost Aggregation for Open-Vocabulary Semantic Segmentation, CVPR 2024
+This is our official implementation of CAT-Seg! Please stay tuned for CVPR version of CAT-Seg.
 
 [[arXiv](https://arxiv.org/abs/2303.11797)] [[Project](https://ku-cvlab.github.io/CAT-Seg/)] [[HuggingFace Demo](https://huggingface.co/spaces/hamacojr/CAT-Seg)] [[Segment Anything with CAT-Seg](https://huggingface.co/spaces/hamacojr/SAM-CAT-Seg)]<br>
 
-by [Seokju Cho](https://seokju-cho.github.io/)\*, [Heeseong Shin](https://github.com/hsshin98)\*, [Sunghwan Hong](https://sunghwanhong.github.io), Seungjun An, Seungjun Lee, [Anurag Arnab](https://anuragarnab.github.io), [Paul Hongsuck Seo](https://phseo.github.io), [Seungryong Kim](https://cvlab.korea.ac.kr)
+by [Seokju Cho](https://seokju-cho.github.io/)\*, [Heeseong Shin](https://github.com/hsshin98)\*, [Sunghwan Hong](https://sunghwanhong.github.io), [Anurag Arnab](https://anuragarnab.github.io), [Paul Hongsuck Seo](https://phseo.github.io), [Seungryong Kim](https://cvlab.korea.ac.kr)
 
 ## Introduction
 ![](assets/fig1.png)
@@ -24,6 +23,7 @@ For further details and visualization results, please check out our [paper](http
 - [x] Train/Evaluation Code (Mar 21, 2023)
 - [x] Pre-trained weights (Mar 30, 2023)
 - [x] Code of interactive demo (Jul 13, 2023)
+- [ ] Release of CVPR version.
 
 ## Installation
 Please follow [installation](INSTALL.md). 
