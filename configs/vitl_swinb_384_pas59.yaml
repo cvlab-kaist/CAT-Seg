@@ -1,7 +1,0 @@
-_BASE_: vitl_swinb_384.yaml
-MODEL:
-  META_ARCHITECTURE: "CATSeg"
-  SEM_SEG_HEAD:
-    TEST_CLASS_JSON: "datasets/pc59.json"
-DATASETS:
-  TEST: ("context_59_test_sem_seg",)

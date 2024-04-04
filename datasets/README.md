@@ -157,10 +157,10 @@ Download the data of PASCAL VOC 2010 from https://www.cs.stanford.edu/~roozbeh/p
 ```
 wget http://host.robots.ox.ac.uk/pascal/VOC/voc2010/VOCtrainval_03-May-2010.tar
 ```
-Download the annotation for [59](https://codalabuser.blob.core.windows.net/public/trainval_merged.json) and [459](https://www.cs.stanford.edu/~roozbeh/pascal-context/trainval.tar.gz) classes.
+Download the annotation for [59](https://codalabuser.blob.core.windows.net/public/trainval_merged.json) and [459](https://roozbehm.info/pascal-context/trainval.tar.gz.) classes.
 ```
 wget https://codalabuser.blob.core.windows.net/public/trainval_merged.json
-wget https://www.cs.stanford.edu/~roozbeh/pascal-context/trainval.tar.gz
+wget https://roozbehm.info/pascal-context/trainval.tar.gz.
 ```
 Unzip `VOCtrainval_03-May-2010.tar` and `trainval.tar.gz`. Then put them to the correct location listed above and generate the labels for testing.
 ```

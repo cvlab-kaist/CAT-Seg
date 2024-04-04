@@ -5,8 +5,8 @@
 [![PWC](https://img.shields.io/endpoint.svg?url=https://paperswithcode.com/badge/cat-seg-cost-aggregation-for-open-vocabulary/open-vocabulary-semantic-segmentation-on-5)](https://paperswithcode.com/sota/open-vocabulary-semantic-segmentation-on-5?p=cat-seg-cost-aggregation-for-open-vocabulary)
 
 
-# CAT-Seg: Cost Aggregation for Open-Vocabulary Semantic Segmentation, CVPR 2024
-This is our official implementation of CAT-Seg! Please stay tuned for CVPR version of CAT-Seg.
+# CAT-Seg: Cost Aggregation for Open-Vocabulary Semantic Segmentation [CVPR 2024]
+This is our official implementation of CAT-Seg! 
 
 [[arXiv](https://arxiv.org/abs/2303.11797)] [[Project](https://ku-cvlab.github.io/CAT-Seg/)] [[HuggingFace Demo](https://huggingface.co/spaces/hamacojr/CAT-Seg)] [[Segment Anything with CAT-Seg](https://huggingface.co/spaces/hamacojr/SAM-CAT-Seg)]<br>
 
@@ -18,13 +18,20 @@ We introduce cost aggregation to open-vocabulary semantic segmentation, which jo
 
 For further details and visualization results, please check out our [paper](https://arxiv.org/abs/2303.11797) and our [project page](https://ku-cvlab.github.io/CAT-Seg/).
 
-**❗️Update:** We released a **[demo](https://huggingface.co/spaces/hamacojr/SAM-CAT-Seg)** for combining CAT-Seg and [Segment Anything](https://github.com/facebookresearch/segment-anything) for open-vocabulary semantic segmentation! We also released the code and installation guide in the demo branch for trying out the demo on your local devices! 
+**❗️Update:** We released the code for CVPR version of CAT-Seg! 
+Some major updates are:
+- We now solely utilize CLIP as the pre-trained encoders, without additional backbones(ResNet, Swin)!
+- We also fine-tune the text encoder of CLIP, yielding significantly improved performance!
+
+For further details, please check out our updated [paper](https://arxiv.org/abs/2303.11797).
+Note that the demos are still running on our previous version, and will be updated soon!
 
 ## :fire:TODO
 - [x] Train/Evaluation Code (Mar 21, 2023)
 - [x] Pre-trained weights (Mar 30, 2023)
 - [x] Code of interactive demo (Jul 13, 2023)
-- [ ] Release of CVPR version.
+- [x] Release code for CVPR version (Apr 4, 2024)
+- [ ] Release checkpoints for CVPR version.
 
 ## Installation
 Please follow [installation](INSTALL.md). 
@@ -45,13 +52,9 @@ To train or evaluate the model in different environments, modify the given shell
 sh run.sh [CONFIG] [NUM_GPUS] [OUTPUT_DIR] [OPTS]
 
 # For ViT-B variant
-sh run.sh configs/vitb_r101_384.yaml 4 output/
+sh run.sh configs/vitb_384.yaml 4 output/
 # For ViT-L variant
-sh run.sh configs/vitl_swinb_384.yaml 4 output/
-# For ViT-H variant
-sh run.sh configs/vitl_swinb_384.yaml 4 output/ MODEL.SEM_SEG_HEAD.CLIP_PRETRAINED "ViT-H" MODEL.SEM_SEG_HEAD.TEXT_GUIDANCE_DIM 1024
-# For ViT-G variant
-sh run.sh configs/vitl_swinb_384.yaml 4 output/ MODEL.SEM_SEG_HEAD.CLIP_PRETRAINED "ViT-G" MODEL.SEM_SEG_HEAD.TEXT_GUIDANCE_DIM 1280
+sh run.sh configs/vitl_336.yaml 4 output/
 ```
 
 ## Evaluation
@@ -62,7 +65,7 @@ To individually run the model in different datasets, please refer to the command
 ```bash
 sh run.sh [CONFIG] [NUM_GPUS] [OUTPUT_DIR] [OPTS]
 
-sh eval.sh configs/vitl_swinb_384.yaml 4 output/ MODEL.WEIGHTS path/to/weights.pth
+sh eval.sh configs/vitl_336.yaml 4 output/ MODEL.WEIGHTS path/to/weights.pth
 ```
 
 ## Pretrained Models
@@ -72,7 +75,6 @@ We provide pretrained weights for our models reported in the paper. All of the m
 <!-- START TABLE -->
 <!-- TABLE HEADER -->
 <th valign="bottom">Name</th>
-<th valign="bottom">Backbone</th>
 <th valign="bottom">CLIP</th>
 <th valign="bottom">A-847</th>
 <th valign="bottom">PC-459</th>
@@ -85,54 +87,28 @@ We provide pretrained weights for our models reported in the paper. All of the m
 <!-- ROW: CAT-Seg (B) -->
 <tr>
 <td align="left">CAT-Seg (B)</a></td>
-<td align="center">R101</td>
 <td align="center">ViT-B/16</td>
-<td align="center">8.9</td>
-<td align="center">16.6</td>
-<td align="center">27.2</td>
+<td align="center">12.0</td>
+<td align="center">19.0</td>
+<td align="center">31.8</td>
 <td align="center">57.5</td>
-<td align="center">93.7</td>
-<td align="center">78.3</td>
-<td align="center"><a href="https://huggingface.co/hamacojr/CAT-Seg/blob/main/model_final_base.pth">ckpt</a>&nbsp;
+<td align="center">94.6</td>
+<td align="center">77.3</td>
+<td align="center">ckpt</a>&nbsp;
 </tr>
 <!-- ROW: CAT-Seg (L) -->
 <tr>
 <td align="left">CAT-Seg (L)</a></td>
-<td align="center">Swin-B</td>
 <td align="center">ViT-L/14</td>
-<td align="center">11.4</td>
-<td align="center">20.4</td>
-<td align="center">31.5</td>
-<td align="center">62.0</td>
-<td align="center">96.6</td>
-<td align="center">81.8</td>
-<td align="center"><a href="https://huggingface.co/hamacojr/CAT-Seg/blob/main/model_final_large.pth">ckpt</a>&nbsp;
+<td align="center">16.0</td>
+<td align="center">23.8</td>
+<td align="center">37.9</td>
+<td align="center">63.3</td>
+<td align="center">97.0</td>
+<td align="center">82.5</td>
+<td align="center">ckpt</a>&nbsp;
 </tr>
-<!-- ROW: CAT-Seg (H) -->
-<tr>
-<td align="left">CAT-Seg (H)</a></td>
-<td align="center">Swin-B</td>
-<td align="center">ViT-H/14</td>
-<td align="center">13.1</td>
-<td align="center">20.1</td>
-<td align="center">34.4</td>
-<td align="center">61.2</td>
-<td align="center">96.7</td>
-<td align="center">80.2</td>
-<td align="center"><a href="https://huggingface.co/hamacojr/CAT-Seg/blob/main/model_final_huge.pth">ckpt</a>&nbsp;
-</tr>
-<!-- ROW: CAT-Seg (G) -->
- <tr><td align="left">CAT-Seg (G)</a></td>
-<td align="center">Swin-B</td>
-<td align="center">ViT-G/14</td>
-<td align="center">14.1</td>
-<td align="center">21.4</td>
-<td align="center">36.2</td>
-<td align="center">61.5</td>
-<td align="center">97.1</td>
-<td align="center">81.4</td>
-<td align="center"><a href="https://huggingface.co/hamacojr/CAT-Seg/blob/main/model_final_giant.pth">ckpt</a>&nbsp;
-</tr>
+
 </tbody></table>
 
 
@@ -142,10 +118,10 @@ We also thank [Benedikt](mailto:benedikt.blumenstiel@student.kit.edu) for findin
 ## Citing CAT-Seg :cat::pray:
 
 ```BibTeX
-@misc{cho2023catseg,
+@misc{cho2024catseg,
       title={CAT-Seg: Cost Aggregation for Open-Vocabulary Semantic Segmentation}, 
-      author={Seokju Cho and Heeseong Shin and Sunghwan Hong and Seungjun An and Seungjun Lee and Anurag Arnab and Paul Hongsuck Seo and Seungryong Kim},
-      year={2023},
+      author={Seokju Cho and Heeseong Shin and Sunghwan Hong and Anurag Arnab and Paul Hongsuck Seo and Seungryong Kim},
+      year={2024},
       eprint={2303.11797},
       archivePrefix={arXiv},
       primaryClass={cs.CV}
