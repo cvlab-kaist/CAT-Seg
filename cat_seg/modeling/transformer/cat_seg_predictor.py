@@ -1,6 +1,7 @@
 # Copyright (c) Facebook, Inc. and its affiliates.
 # Modified by Bowen Cheng from: https://github.com/facebookresearch/detr/blob/master/models/detr.py
 # Modified by Jian Ding from: https://github.com/facebookresearch/MaskFormer/blob/main/mask_former/modeling/transformer/transformer_predictor.py
+# Modified by Heeseong Shin from: https://github.com/dingjiansw101/ZegFormer/blob/main/mask_former/mask_former_model.py
 import fvcore.nn.weight_init as weight_init
 import torch
 
@@ -84,6 +85,8 @@ class CATSegPredictor(nn.Module):
             prompt_templates = ['A photo of a {} in the scene',]
         else:
             raise NotImplementedError
+        
+        self.prompt_templates = prompt_templates
 
         self.text_features = self.class_embeddings(self.class_texts, prompt_templates, clip_model).permute(1, 0, 2).float()
         self.text_features_test = self.class_embeddings(self.test_class_texts, prompt_templates, clip_model).permute(1, 0, 2).float()
@@ -105,9 +108,13 @@ class CATSegPredictor(nn.Module):
             pooling_size=pooling_sizes,
             feature_resolution=feature_resolution,
             window_size=window_sizes,
-            attention_type=attention_type
+            attention_type=attention_type,
+            prompt_channel=len(prompt_templates),
             )
         self.transformer = transformer
+        
+        self.tokens = None
+        self.cache = None
 
     @classmethod
     def from_config(cls, cfg):#, in_channels, mask_classification):
@@ -141,9 +148,12 @@ class CATSegPredictor(nn.Module):
 
         return ret
 
-    def forward(self, x, vis_guidance):
+    def forward(self, x, vis_guidance, prompt=None, gt_cls=None):
         vis = [vis_guidance[k] for k in vis_guidance.keys()][::-1]
-        text = self.text_features if self.training else self.text_features_test
+        text = self.class_texts if self.training else self.test_class_texts
+        text = [text[c] for c in gt_cls] if gt_cls is not None else text
+        text = self.get_text_embeds(text, self.prompt_templates, self.clip_model, prompt)
+        
         text = text.repeat(x.shape[0], 1, 1, 1)
         out = self.transformer(x, text, vis)
         return out
@@ -165,11 +175,45 @@ class CATSegPredictor(nn.Module):
             else: 
                 texts = clip.tokenize(texts).cuda()
             class_embeddings = clip_model.encode_text(texts)
-            class_embeddings /= class_embeddings.norm(dim=-1, keepdim=True)
+            class_embeddings = class_embeddings / class_embeddings.norm(dim=-1, keepdim=True)
             if len(templates) != class_embeddings.shape[0]:
                 class_embeddings = class_embeddings.reshape(len(templates), -1, class_embeddings.shape[-1]).mean(dim=1)
-                class_embeddings /= class_embeddings.norm(dim=-1, keepdim=True)
+                class_embeddings = class_embeddings / class_embeddings.norm(dim=-1, keepdim=True)
             class_embedding = class_embeddings
             zeroshot_weights.append(class_embedding)
         zeroshot_weights = torch.stack(zeroshot_weights, dim=1).cuda()
         return zeroshot_weights
+    
+    def get_text_embeds(self, classnames, templates, clip_model, prompt=None):
+        if self.cache is not None and not self.training:
+            return self.cache
+        
+        if self.tokens is None or prompt is not None:
+            tokens = []
+            for classname in classnames:
+                if ', ' in classname:
+                    classname_splits = classname.split(', ')
+                    texts = [template.format(classname_splits[0]) for template in templates]
+                else:
+                    texts = [template.format(classname) for template in templates]  # format with class
+                if self.tokenizer is not None:
+                    texts = self.tokenizer(texts).cuda()
+                else: 
+                    texts = clip.tokenize(texts).cuda()
+                tokens.append(texts)
+            tokens = torch.stack(tokens, dim=0).squeeze(1)
+            if prompt is None:
+                self.tokens = tokens
+        elif self.tokens is not None and prompt is None:
+            tokens = self.tokens
+
+        class_embeddings = clip_model.encode_text(tokens, prompt)
+        class_embeddings = class_embeddings / class_embeddings.norm(dim=-1, keepdim=True)
+        
+        
+        class_embeddings = class_embeddings.unsqueeze(1)
+        
+        if not self.training:
+            self.cache = class_embeddings
+            
+        return class_embeddings

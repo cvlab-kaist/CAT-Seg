@@ -1,3 +1,9 @@
+# --------------------------------------------------------
+# CAT-Seg: Cost Aggregation for Open-vocabulary Semantic Segmentation
+# Licensed under The MIT License [see LICENSE for details]
+# Written by Seokju Cho and Heeseong Shin
+# --------------------------------------------------------
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -7,6 +13,8 @@ from einops.layers.torch import Rearrange
 
 from timm.layers import PatchEmbed, Mlp, DropPath, to_2tuple, to_ntuple, trunc_normal_, _assert
 
+# Modified Swin Transformer blocks for guidance implementetion
+# https://github.com/microsoft/Swin-Transformer/blob/main/models/swin_transformer.py
 def window_partition(x, window_size: int):
     """
     Args:
@@ -218,11 +226,15 @@ class SwinTransformerBlock(nn.Module):
 
 
 class SwinTransformerBlockWrapper(nn.Module):
-    def __init__(self, dim, appearance_guidance_dim, input_resolution, nheads=4, window_size=5):
+    def __init__(self, dim, appearance_guidance_dim, input_resolution, nheads=4, window_size=5, pad_len=0):
         super().__init__()
         self.block_1 = SwinTransformerBlock(dim, appearance_guidance_dim, input_resolution, num_heads=nheads, head_dim=None, window_size=window_size, shift_size=0)
         self.block_2 = SwinTransformerBlock(dim, appearance_guidance_dim, input_resolution, num_heads=nheads, head_dim=None, window_size=window_size, shift_size=window_size // 2)
         self.guidance_norm = nn.LayerNorm(appearance_guidance_dim) if appearance_guidance_dim > 0 else None
+
+        self.pad_len = pad_len
+        self.padding_tokens = nn.Parameter(torch.zeros(1, 1, dim)) if pad_len > 0 else None
+        self.padding_guidance = nn.Parameter(torch.zeros(1, 1, appearance_guidance_dim)) if pad_len > 0 and appearance_guidance_dim > 0 else None
     
     def forward(self, x, appearance_guidance):
         """
@@ -231,6 +243,7 @@ class SwinTransformerBlockWrapper(nn.Module):
             appearance_guidance: B C H W
         """
         B, C, T, H, W = x.shape
+        
         x = rearrange(x, 'B C T H W -> (B T) (H W) C')
         if appearance_guidance is not None:
             appearance_guidance = self.guidance_norm(repeat(appearance_guidance, 'B C H W -> (B T) (H W) C', T=T))
@@ -342,9 +355,9 @@ class AttentionLayer(nn.Module):
 
 
 class ClassTransformerLayer(nn.Module):
-    def __init__(self, hidden_dim=64, guidance_dim=64, nheads=8, attention_type='linear', pooling_size=(4, 4)) -> None:
+    def __init__(self, hidden_dim=64, guidance_dim=64, nheads=8, attention_type='linear', pooling_size=(4, 4), pad_len=256) -> None:
         super().__init__()
-        self.pool = nn.AvgPool2d(pooling_size)
+        self.pool = nn.AvgPool2d(pooling_size) if pooling_size is not None else nn.Identity()
         self.attention = AttentionLayer(hidden_dim, guidance_dim, nheads=nheads, attention_type=attention_type)
         self.MLP = nn.Sequential(
             nn.Linear(hidden_dim, hidden_dim * 4),
@@ -354,6 +367,10 @@ class ClassTransformerLayer(nn.Module):
 
         self.norm1 = nn.LayerNorm(hidden_dim)
         self.norm2 = nn.LayerNorm(hidden_dim)
+
+        self.pad_len = pad_len
+        self.padding_tokens = nn.Parameter(torch.zeros(1, 1, hidden_dim)) if pad_len > 0 else None
+        self.padding_guidance = nn.Parameter(torch.zeros(1, 1, guidance_dim)) if pad_len > 0 and guidance_dim > 0 else None
     
     def pool_features(self, x):
         """
@@ -373,12 +390,23 @@ class ClassTransformerLayer(nn.Module):
             x: B, C, T, H, W
             guidance: B, T, C
         """
-        B, _, _, H, W = x.size()
+        B, C, T, H, W = x.size()
         x_pool = self.pool_features(x)
         *_, H_pool, W_pool = x_pool.size()
+        
+        if self.padding_tokens is not None:
+            orig_len = x.size(2)
+            if orig_len < self.pad_len:
+                # pad to pad_len
+                padding_tokens = repeat(self.padding_tokens, '1 1 C -> B C T H W', B=B, T=self.pad_len - orig_len, H=H_pool, W=W_pool)
+                x_pool = torch.cat([x_pool, padding_tokens], dim=2)
 
         x_pool = rearrange(x_pool, 'B C T H W -> (B H W) T C')
         if guidance is not None:
+            if self.padding_guidance is not None:
+                if orig_len < self.pad_len:
+                    padding_guidance = repeat(self.padding_guidance, '1 1 C -> B T C', B=B, T=self.pad_len - orig_len)
+                    guidance = torch.cat([guidance, padding_guidance], dim=1)
             guidance = repeat(guidance, 'B T C -> (B H W) T C', H=H_pool, W=W_pool)
 
         x_pool = x_pool + self.attention(self.norm1(x_pool), guidance) # Attention
@@ -387,6 +415,10 @@ class ClassTransformerLayer(nn.Module):
         x_pool = rearrange(x_pool, '(B H W) T C -> (B T) C H W', H=H_pool, W=W_pool)
         x_pool = F.interpolate(x_pool, size=(H, W), mode='bilinear', align_corners=True)
         x_pool = rearrange(x_pool, '(B T) C H W -> B C T H W', B=B)
+
+        if self.padding_tokens is not None:
+            if orig_len < self.pad_len:
+                x_pool = x_pool[:, :, :orig_len]
 
         x = x + x_pool # Residual
         return x
@@ -448,11 +480,10 @@ class Bottleneck(nn.Module):
 
 
 class AggregatorLayer(nn.Module):
-    def __init__(self, hidden_dim=64, text_guidance_dim=512, appearance_guidance=512, nheads=4, input_resolution=(20, 20), pooling_size=(5, 5), window_size=(10, 10), attention_type='linear') -> None:
+    def __init__(self, hidden_dim=64, text_guidance_dim=512, appearance_guidance=512, nheads=4, input_resolution=(20, 20), pooling_size=(5, 5), window_size=(10, 10), attention_type='linear', pad_len=256) -> None:
         super().__init__()
         self.swin_block = SwinTransformerBlockWrapper(hidden_dim, appearance_guidance, input_resolution, nheads, window_size)
-        self.attention = ClassTransformerLayer(hidden_dim, text_guidance_dim, nheads=nheads, attention_type=attention_type, pooling_size=pooling_size)
-
+        self.attention = ClassTransformerLayer(hidden_dim, text_guidance_dim, nheads=nheads, attention_type=attention_type, pooling_size=pooling_size, pad_len=pad_len)
 
     def forward(self, x, appearance_guidance, text_guidance):
         """
@@ -533,15 +564,41 @@ class Aggregator(nn.Module):
         decoder_dims = (64, 32),
         decoder_guidance_dims=(256, 128),
         decoder_guidance_proj_dims=(32, 16),
-        num_layers=4, 
+        num_layers=4,
         nheads=4, 
         hidden_dim=128,
         pooling_size=(6, 6),
         feature_resolution=(24, 24),
         window_size=12,
         attention_type='linear',
-        prompt_channel=80,
+        prompt_channel=1,
+        pad_len=256,
     ) -> None:
+        """
+        Cost Aggregation Model for CAT-Seg
+        Args:
+            text_guidance_dim: Dimension of text guidance
+            text_guidance_proj_dim: Dimension of projected text guidance
+            appearance_guidance_dim: Dimension of appearance guidance
+            appearance_guidance_proj_dim: Dimension of projected appearance guidance
+            decoder_dims: Upsampling decoder dimensions
+            decoder_guidance_dims: Upsampling decoder guidance dimensions
+            decoder_guidance_proj_dims: Upsampling decoder guidance projected dimensions
+            num_layers: Number of layers for the aggregator
+            nheads: Number of attention heads
+            hidden_dim: Hidden dimension for transformer blocks
+            pooling_size: Pooling size for the class aggregation layer
+                          To reduce computation, we apply pooling in class aggregation blocks to reduce the number of tokens during training
+            feature_resolution: Feature resolution for spatial aggregation
+            window_size: Window size for Swin block in spatial aggregation
+            attention_type: Attention type for the class aggregation. 
+            prompt_channel: Number of prompts for ensembling text features. Default: 1
+            pad_len: Padding length for the class aggregation. Default: 256
+                     pad_len enforces the class aggregation block to have a fixed length of tokens for all inputs
+                     This means it either pads the sequence with learnable tokens in class aggregation,
+                     or truncates the classes with the initial CLIP cosine-similarity scores.
+                     Set pad_len to 0 to disable this feature.
+            """
         super().__init__()
         self.num_layers = num_layers
         self.hidden_dim = hidden_dim
@@ -549,7 +606,7 @@ class Aggregator(nn.Module):
         self.layers = nn.ModuleList([
             AggregatorLayer(
                 hidden_dim=hidden_dim, text_guidance_dim=text_guidance_proj_dim, appearance_guidance=appearance_guidance_proj_dim, 
-                nheads=nheads, input_resolution=feature_resolution, pooling_size=pooling_size, window_size=window_size, attention_type=attention_type
+                nheads=nheads, input_resolution=feature_resolution, pooling_size=pooling_size, window_size=window_size, attention_type=attention_type, pad_len=pad_len,
             ) for _ in range(num_layers)
         ])
 
@@ -576,11 +633,14 @@ class Aggregator(nn.Module):
         self.decoder2 = Up(decoder_dims[0], decoder_dims[1], decoder_guidance_proj_dims[1])
         self.head = nn.Conv2d(decoder_dims[1], 1, kernel_size=3, stride=1, padding=1)
 
+        self.pad_len = pad_len
+
     def feature_map(self, img_feats, text_feats):
+        # concatenated feature volume for feature aggregation baselines
         img_feats = F.normalize(img_feats, dim=1) # B C H W
         img_feats = repeat(img_feats, "B C H W -> B C T H W", T=text_feats.shape[1])
         text_feats = F.normalize(text_feats, dim=-1) # B T P C
-        text_feats = text_feats.mean(dim=-2)
+        text_feats = text_feats.mean(dim=-2) # average text features over different prompts
         text_feats = F.normalize(text_feats, dim=-1) # B T C
         text_feats = repeat(text_feats, "B T C -> B C T H W", H=img_feats.shape[-2], W=img_feats.shape[-1])
         return torch.cat((img_feats, text_feats), dim=1) # B 2C T H W
@@ -627,10 +687,21 @@ class Aggregator(nn.Module):
             text_feats: (B, T, P, C)
             apperance_guidance: tuple of (B, C, H, W)
         """
+        classes = None
+
         corr = self.correlation(img_feats, text_feats)
+        if self.pad_len > 0 and text_feats.size(1) > self.pad_len:
+            avg = corr.permute(0, 2, 1, 3, 4).flatten(-3).max(dim=-1)[0] 
+            classes = avg.topk(self.pad_len, dim=-1, sorted=False)[1]
+            th_text = F.normalize(text_feats, dim=-1)
+            th_text = torch.gather(th_text, dim=1, index=classes[..., None, None].expand(-1, -1, th_text.size(-2), th_text.size(-1)))
+            orig_clases = text_feats.size(1)
+            img_feats = F.normalize(img_feats, dim=1) # B C H W
+            text_feats = th_text
+            corr = torch.einsum('bchw, btpc -> bpthw', img_feats, th_text)
         #corr = self.feature_map(img_feats, text_feats)
         corr_embed = self.corr_embed(corr)
-        
+
         projected_guidance, projected_text_guidance, projected_decoder_guidance = None, None, [None, None]
         if self.guidance_projection is not None:
             projected_guidance = self.guidance_projection(appearance_guidance[0])
@@ -646,5 +717,8 @@ class Aggregator(nn.Module):
             corr_embed = layer(corr_embed, projected_guidance, projected_text_guidance)
 
         logit = self.conv_decoder(corr_embed, projected_decoder_guidance)
-
+        if classes is not None:
+            out = torch.full((logit.size(0), orig_clases, logit.size(2), logit.size(3)), -100., device=logit.device)
+            out.scatter_(dim=1, index=classes[..., None, None].expand(-1, -1, logit.size(-2), logit.size(-1)), src=logit)
+            logit = out
         return logit

@@ -37,7 +37,6 @@ class CATSeg(nn.Module):
     ):
         """
         Args:
-            backbone: a backbone module, must follow detectron2's backbone interface
             sem_seg_head: a module that predicts semantic segmentation from backbone features
         """
         super().__init__()
@@ -57,11 +56,17 @@ class CATSeg(nn.Module):
 
         self.clip_finetune = clip_finetune
         for name, params in self.sem_seg_head.predictor.clip_model.named_parameters():
-            if "visual" in name:
+            if "transformer" in name:
                 if clip_finetune == "prompt":
                     params.requires_grad = True if "prompt" in name else False
                 elif clip_finetune == "attention":
-                    params.requires_grad = True if "attn" in name or "position" in name else False
+                    if "attn" in name:
+                        # QV fine-tuning for attention blocks
+                        params.requires_grad = True if "q_proj" in name or "v_proj" in name else False
+                    elif "position" in name:
+                        params.requires_grad = True
+                    else:
+                        params.requires_grad = False
                 elif clip_finetune == "full":
                     params.requires_grad = True
                 else:
@@ -69,21 +74,23 @@ class CATSeg(nn.Module):
             else:
                 params.requires_grad = False
 
-        finetune_backbone = backbone_multiplier > 0.
-        for name, params in self.backbone.named_parameters():
-            if "norm0" in name:
-                params.requires_grad = False
-            else:
-                params.requires_grad = finetune_backbone
-
         self.sliding_window = sliding_window
         self.clip_resolution = (384, 384) if clip_pretrained == "ViT-B/16" else (336, 336)
-        self.sequential = False
+
+        self.proj_dim = 768 if clip_pretrained == "ViT-B/16" else 1024
+        self.upsample1 = nn.ConvTranspose2d(self.proj_dim, 256, kernel_size=2, stride=2)
+        self.upsample2 = nn.ConvTranspose2d(self.proj_dim, 128, kernel_size=4, stride=4)
+
+        self.layer_indexes = [3, 7] if clip_pretrained == "ViT-B/16" else [7, 15] 
+        self.layers = []
+        for l in self.layer_indexes:
+            self.sem_seg_head.predictor.clip_model.visual.transformer.resblocks[l].register_forward_hook(lambda m, _, o: self.layers.append(o))
+
 
     @classmethod
     def from_config(cls, cfg):
-        backbone = build_backbone(cfg)
-        sem_seg_head = build_sem_seg_head(cfg, backbone.output_shape())
+        backbone = None
+        sem_seg_head = build_sem_seg_head(cfg, None)
         
         return {
             "backbone": backbone,
@@ -104,7 +111,7 @@ class CATSeg(nn.Module):
     @property
     def device(self):
         return self.pixel_mean.device
-
+    
     def forward(self, batched_inputs):
         """
         Args:
@@ -126,25 +133,28 @@ class CATSeg(nn.Module):
                     The prediction has shape KxHxW that represents the logits of
                     each class for each pixel.
         """
+        
         images = [x["image"].to(self.device) for x in batched_inputs]
         if not self.training and self.sliding_window:
-            if not self.sequential:
-                with _ignore_torch_cuda_oom():
-                    return self.inference_sliding_window(batched_inputs)
-                self.sequential = True
             return self.inference_sliding_window(batched_inputs)
 
         clip_images = [(x - self.clip_pixel_mean) / self.clip_pixel_std for x in images]
         clip_images = ImageList.from_tensors(clip_images, self.size_divisibility)
-        
-        images = [(x - self.pixel_mean) / self.pixel_std for x in images]
-        images = ImageList.from_tensors(images, self.size_divisibility)
 
-        clip_images = F.interpolate(clip_images.tensor, size=self.clip_resolution, mode='bilinear', align_corners=False, )
-        clip_features = self.sem_seg_head.predictor.clip_model.encode_image(clip_images, dense=True)
+        self.layers = []
 
-        images_resized = F.interpolate(images.tensor, size=(384, 384), mode='bilinear', align_corners=False,)
-        features = self.backbone(images_resized)
+        clip_images_resized = F.interpolate(clip_images.tensor, size=self.clip_resolution, mode='bilinear', align_corners=False, )
+        clip_features = self.sem_seg_head.predictor.clip_model.encode_image(clip_images_resized, dense=True)
+
+        image_features = clip_features[:, 1:, :]
+
+        # CLIP ViT features for guidance
+        res3 = rearrange(image_features, "B (H W) C -> B C H W", H=24)
+        res4 = rearrange(self.layers[0][1:, :, :], "(H W) B C -> B C H W", H=24)
+        res5 = rearrange(self.layers[1][1:, :, :], "(H W) B C -> B C H W", H=24)
+        res4 = self.upsample1(res4)
+        res5 = self.upsample2(res5)
+        features = {'res5': res5, 'res4': res4, 'res3': res3,}
 
         outputs = self.sem_seg_head(clip_features, features)
         if self.training:
@@ -162,9 +172,10 @@ class CATSeg(nn.Module):
             loss = F.binary_cross_entropy_with_logits(outputs, _targets)
             losses = {"loss_sem_seg" : loss}
             return losses
+
         else:
             outputs = outputs.sigmoid()
-            image_size = images.image_sizes[0]
+            image_size = clip_images.image_sizes[0]
             height = batched_inputs[0].get("height", image_size[0])
             width = batched_inputs[0].get("width", image_size[1])
 
@@ -188,19 +199,16 @@ class CATSeg(nn.Module):
         images = (image - self.pixel_mean) / self.pixel_std
         clip_images = (image - self.clip_pixel_mean) / self.clip_pixel_std
         clip_images = F.interpolate(clip_images, size=self.clip_resolution, mode='bilinear', align_corners=False, )
+        clip_features = self.sem_seg_head.predictor.clip_model.encode_image(clip_images, dense=True)
         
-        if self.sequential:
-            outputs = []
-            for clip_feat, image in zip(clip_images, images):
-                feature = self.backbone(image.unsqueeze(0))
-                clip_feat = self.sem_seg_head.predictor.clip_model.encode_image(clip_feat.unsqueeze(0), dense=True)
-                output = self.sem_seg_head(clip_feat, feature)
-                outputs.append(output[0])
-            outputs = torch.stack(outputs, dim=0)
-        else:
-            features = self.backbone(images)
-            clip_features = self.sem_seg_head.predictor.clip_model.encode_image(clip_images, dense=True)
-            outputs = self.sem_seg_head(clip_features, features)
+        self.layers = []
+        clip_features = self.sem_seg_head.predictor.clip_model.encode_image(clip_images, dense=True)
+        res3 = rearrange(clip_features[:, 1:, :], "B (H W) C -> B C H W", H=24)
+        res4 = self.upsample1(rearrange(self.layers[0][1:, :, :], "(H W) B C -> B C H W", H=24))
+        res5 = self.upsample2(rearrange(self.layers[1][1:, :, :], "(H W) B C -> B C H W", H=24))
+
+        features = {'res5': res5, 'res4': res4, 'res3': res3,}
+        outputs = self.sem_seg_head(clip_features, features)
 
         outputs = F.interpolate(outputs, size=kernel, mode="bilinear", align_corners=False)
         outputs = outputs.sigmoid()

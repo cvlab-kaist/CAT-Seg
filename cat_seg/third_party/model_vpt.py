@@ -6,6 +6,7 @@ import torch.nn.functional as F
 from torch import nn
 
 
+
 class Bottleneck(nn.Module):
     expansion = 4
 
@@ -164,12 +165,27 @@ class QuickGELU(nn.Module):
     def forward(self, x: torch.Tensor):
         return x * torch.sigmoid(1.702 * x)
 
+class Attention(nn.MultiheadAttention):
+    # Modified attention block for separating q, k, v projection weights
+    def __init__(self, *args, **kwargs):
+        super(Attention, self).__init__(*args, **kwargs)
+        self._qkv_same_embed_dim = False
+        q, k, v = self.in_proj_weight.chunk(3, dim=0)
+        self.q_proj_weight = nn.Parameter(q)
+        self.k_proj_weight = nn.Parameter(k)
+        self.v_proj_weight = nn.Parameter(v)
+        self.in_proj_weight = None
+    
+    def forward(self, *args, **kwargs):
+        return super().forward(*args, **kwargs)
+
+        
 
 class ResidualAttentionBlock(nn.Module):
     def __init__(self, d_model: int, n_head: int, attn_mask: torch.Tensor = None):
         super().__init__()
 
-        self.attn = nn.MultiheadAttention(d_model, n_head)
+        self.attn = Attention(d_model, n_head)
         self.ln_1 = LayerNorm(d_model)
         self.mlp = nn.Sequential(OrderedDict([
             ("c_fc", nn.Linear(d_model, d_model * 4)),
@@ -184,23 +200,34 @@ class ResidualAttentionBlock(nn.Module):
         self.attn_mask = self.attn_mask.to(dtype=x.dtype, device=x.device) if self.attn_mask is not None else None
         return self.attn(x, x, x, need_weights=False, attn_mask=self.attn_mask)[0]
 
-    def forward(self, x: torch.Tensor):
+    def forward(self, x: torch.Tensor, prompt=None):
         x = x + self.attention(self.ln_1(x))
         x = x + self.mlp(self.ln_2(x))
+        if prompt is not None:
+            x = torch.cat((x[0:1, :, :], x[prompt + 1: :, :]), dim=0)
         return x
 
-    def forward_dense(self, x: torch.Tensor):
+    def forward_dense(self, x: torch.Tensor, prompt=None):
         y = self.ln_1(x)
-        y = F.linear(y, self.attn.in_proj_weight, self.attn.in_proj_bias)
+        if self.attn.in_proj_weight is not None:
+            y = F.linear(y, self.attn.in_proj_weight, self.attn.in_proj_bias)
+        else:
+            proj = torch.cat((self.attn.q_proj_weight, self.attn.k_proj_weight, self.attn.v_proj_weight), dim=0)
+            y = F.linear(y, proj, self.attn.in_proj_bias)
+
         L, N, D = y.shape # L N 3D
         
         y = y.reshape(L, N, 3, D // 3).permute(2, 1, 0, 3).reshape(3 * N, L, D // 3)
         y = F.linear(y, self.attn.out_proj.weight, self.attn.out_proj.bias)
         
         q, k, v = y.tensor_split(3, dim=0)
-        v = v.transpose(1, 0) + x # L N D
+        
+        v = v.transpose(1, 0) + x[:1] # L N D
 
         v = v + self.mlp(self.ln_2(v))
+        
+        if prompt is not None:
+            v = torch.cat((v[0:1, :, :], v[prompt + 1: :, :]), dim=0)
         return v
 
 
@@ -217,17 +244,15 @@ class Transformer(nn.Module):
         if self.prompt_tokens is not None:
             nn.init.xavier_uniform_(self.prompt_tokens)
 
-    def forward(self, x: torch.Tensor, dense=False):
+    def forward(self, x: torch.Tensor, dense=False, prompt=None):
         for i, resblock in enumerate(self.resblocks):
             if self.prompt_length > 0 and i < self.prompt_depth:
-                l = self.prompt_length + 1 if i > 0 else 1    
-                x = torch.cat((x[0:1, :, :], self.prompt_tokens[i].repeat(x.shape[1], 1, 1).permute(1, 0, 2) ,x[l:, :, :]))
+                x = torch.cat((x[0:1, :, :], self.prompt_tokens[i].repeat(x.shape[1], 1, 1).permute(1, 0, 2) ,x[1:, :, :]))
             
             if i == self.layers - 1 and dense:
-                x = resblock.forward_dense(x)
-                x = torch.cat((x[0:1, :, :], x[self.prompt_length + 1: :, :]), dim=0)
+                x = resblock.forward_dense(x, self.prompt_length)    
             else:
-                x = resblock(x)
+                x = resblock(x, self.prompt_length)
             
         return x
 
@@ -311,6 +336,7 @@ class CLIP(nn.Module):
                  # prompt
                  prompt_depth: int=0,
                  prompt_length: int=0,
+                 text_prompt: bool=False,
                  ):
         super().__init__()
 
@@ -338,15 +364,17 @@ class CLIP(nn.Module):
                 layers=vision_layers,
                 heads=vision_heads,
                 output_dim=embed_dim,
-                prompt_depth=prompt_depth,
-                prompt_length=prompt_length,
+                prompt_depth=prompt_depth, #if not text_prompt else 0,
+                prompt_length=prompt_length, # if not text_prompt else 0,
             )
 
         self.transformer = Transformer(
             width=transformer_width,
             layers=transformer_layers,
             heads=transformer_heads,
-            attn_mask=self.build_attention_mask()
+            attn_mask=self.build_attention_mask(),
+            prompt_depth=0, #prompt_depth,
+            prompt_length=0, #prompt_length,
         )
 
         self.vocab_size = vocab_size
@@ -379,12 +407,16 @@ class CLIP(nn.Module):
         else:
             return self.visual(image.type(self.dtype), masks.type(self.dtype))
 
-    def encode_text(self, text):
+    def encode_text(self, text, prompt=None):
+        #if prompt is not None:
+        #import pdb; pdb.set_trace()
         x = self.token_embedding(text).type(self.dtype)  # [batch_size, n_ctx, d_model]
+        if prompt is not None:
+            x[:, 1:5] = prompt
 
         x = x + self.positional_embedding.type(self.dtype)
         x = x.permute(1, 0, 2)  # NLD -> LND
-        x = self.transformer(x)
+        x = self.transformer(x, prompt=prompt)
         x = x.permute(1, 0, 2)  # LND -> NLD
         x = self.ln_final(x).type(self.dtype)
 
@@ -472,5 +504,17 @@ def build_model(state_dict: dict, prompt_depth=0, prompt_length=0):
         del state_dict[key]
 
     convert_weights(model)
-    model.load_state_dict(state_dict, strict=False)
+    
+    # Modify the state dict to match the model's keys with modified attention block
+    new_state_dict = OrderedDict()
+    for k, v in state_dict.items():
+        if "in_proj_weight" in k:
+            _q, _k, _v = v.chunk(3, dim=0)
+            new_state_dict[k.replace("in", "q")] = _q
+            new_state_dict[k.replace("in", "k")] = _k
+            new_state_dict[k.replace("in", "v")] = _v
+        else:
+            new_state_dict[k] = v
+    
+    model.load_state_dict(new_state_dict, strict=False)
     return model.eval()

@@ -21,7 +21,6 @@ class CATSegHead(nn.Module):
     @configurable
     def __init__(
         self,
-        input_shape: Dict[str, ShapeSpec],
         *,
         num_classes: int,
         ignore_value: int = -1,
@@ -32,17 +31,12 @@ class CATSegHead(nn.Module):
         """
         NOTE: this interface is experimental.
         Args:
-            input_shape: shapes (channels and stride) of the input features
             num_classes: number of classes to predict
-            pixel_decoder: the pixel decoder module
-            loss_weight: loss weight
             ignore_value: category id to be ignored during training.
+            feature_resolution: resolution of the feature map
             transformer_predictor: the transformer decoder that makes prediction
-            transformer_in_feature: input feature name to the transformer_predictor
         """
         super().__init__()
-        input_shape = sorted(input_shape.items(), key=lambda x: x[1].stride)
-        self.in_features = [k for k, v in input_shape]
         self.ignore_value = ignore_value
         self.predictor = transformer_predictor
         self.num_classes = num_classes
@@ -51,9 +45,6 @@ class CATSegHead(nn.Module):
     @classmethod
     def from_config(cls, cfg, input_shape: Dict[str, ShapeSpec]):
         return {
-            "input_shape": {
-                k: v for k, v in input_shape.items() if k in cfg.MODEL.SEM_SEG_HEAD.IN_FEATURES
-            },
             "ignore_value": cfg.MODEL.SEM_SEG_HEAD.IGNORE_VALUE,
             "num_classes": cfg.MODEL.SEM_SEG_HEAD.NUM_CLASSES,
             "feature_resolution": cfg.MODEL.SEM_SEG_HEAD.FEATURE_RESOLUTION,
@@ -62,11 +53,11 @@ class CATSegHead(nn.Module):
             ),
         }
 
-    def forward(self, features, guidance_features):
+    def forward(self, features, guidance_features, prompt=None, gt_cls=None):
         """
         Arguments:
             img_feats: (B, C, HW)
-            affinity_features: (B, C, )
+            guidance_features: (B, C, )
         """
         img_feat = rearrange(features[:, 1:, :], "b (h w) c->b c h w", h=self.feature_resolution[0], w=self.feature_resolution[1])
-        return self.predictor(img_feat, guidance_features)
+        return self.predictor(img_feat, guidance_features, prompt, gt_cls)
