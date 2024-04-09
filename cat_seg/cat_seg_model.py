@@ -199,7 +199,6 @@ class CATSeg(nn.Module):
         images = (image - self.pixel_mean) / self.pixel_std
         clip_images = (image - self.clip_pixel_mean) / self.clip_pixel_std
         clip_images = F.interpolate(clip_images, size=self.clip_resolution, mode='bilinear', align_corners=False, )
-        clip_features = self.sem_seg_head.predictor.clip_model.encode_image(clip_images, dense=True)
         
         self.layers = []
         clip_features = self.sem_seg_head.predictor.clip_model.encode_image(clip_images, dense=True)
