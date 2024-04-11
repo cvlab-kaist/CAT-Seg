@@ -18,7 +18,7 @@ We introduce cost aggregation to open-vocabulary semantic segmentation, which jo
 
 For further details and visualization results, please check out our [paper](https://arxiv.org/abs/2303.11797) and our [project page](https://ku-cvlab.github.io/CAT-Seg/).
 
-**❗️Update:** We released the code for CVPR version of CAT-Seg! 
+**❗️Update:** We released the code and pre-trained weights for CVPR version of CAT-Seg! 
 Some major updates are:
 - We now solely utilize CLIP as the pre-trained encoders, without additional backbones (ResNet, Swin)!
 - We also fine-tune the text encoder of CLIP, yielding significantly improved performance!
@@ -32,7 +32,7 @@ Note that the demos are still running on our previous version, and will be updat
 - [x] Code of interactive demo (Jul 13, 2023)
 - [x] Release code for CVPR version (Apr 4, 2024)
 - [x] Release checkpoints for CVPR version (Apr 11, 2024)
-- [ ] Demo Update
+- [ ] Demo update
 
 ## Installation
 Please follow [installation](INSTALL.md). 
