@@ -20,7 +20,7 @@ For further details and visualization results, please check out our [paper](http
 
 **❗️Update:** We released the code for CVPR version of CAT-Seg! 
 Some major updates are:
-- We now solely utilize CLIP as the pre-trained encoders, without additional backbones(ResNet, Swin)!
+- We now solely utilize CLIP as the pre-trained encoders, without additional backbones (ResNet, Swin)!
 - We also fine-tune the text encoder of CLIP, yielding significantly improved performance!
 
 For further details, please check out our updated [paper](https://arxiv.org/abs/2303.11797).
@@ -31,7 +31,8 @@ Note that the demos are still running on our previous version, and will be updat
 - [x] Pre-trained weights (Mar 30, 2023)
 - [x] Code of interactive demo (Jul 13, 2023)
 - [x] Release code for CVPR version (Apr 4, 2024)
-- [ ] Release checkpoints for CVPR version.
+- [x] Release checkpoints for CVPR version (Apr 11, 2024)
+- [ ] Demo Update
 
 ## Installation
 Please follow [installation](INSTALL.md). 
@@ -94,7 +95,7 @@ We provide pretrained weights for our models reported in the paper. All of the m
 <td align="center">57.5</td>
 <td align="center">94.6</td>
 <td align="center">77.3</td>
-<td align="center">ckpt</a>&nbsp;
+<td align="center"><a href="https://huggingface.co/spaces/hamacojr/CAT-Seg-weights/resolve/main/model_base.pth">ckpt</a>&nbsp;
 </tr>
 <!-- ROW: CAT-Seg (L) -->
 <tr>
@@ -106,7 +107,7 @@ We provide pretrained weights for our models reported in the paper. All of the m
 <td align="center">63.3</td>
 <td align="center">97.0</td>
 <td align="center">82.5</td>
-<td align="center">ckpt</a>&nbsp;
+<td align="center"><a href="https://huggingface.co/spaces/hamacojr/CAT-Seg-weights/resolve/main/model_large.pth">ckpt</a>&nbsp;
 </tr>
 
 </tbody></table>
